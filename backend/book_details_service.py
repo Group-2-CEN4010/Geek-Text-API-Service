@@ -17,3 +17,19 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Table name
 BOOKS_TABLE = "books"
+
+@app.route("/books/<string:book_isbn>", methods=["GET"])
+def get_book_details(book_isbn):
+    try:
+        response = supabase.table(BOOKS_TABLE).select("*").eq("isbn", book_isbn).execute()
+
+        if not response.data:
+            return jsonify({"message": "Book not found"}), 404
+
+        return jsonify(response.data[0]), 200
+
+    except Exception as e:
+        return jsonify({"message": str(e)}), 500
+
+if __name__ == "__main__":
+    app.run(debug=True)
