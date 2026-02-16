@@ -5,4 +5,4 @@ def my_route(): #define what happens when someone visits the URL
     return {"message": "This is my GET route for Sprint 2"}
   
 if __name__ == "__main__":
-  get.run(debug=True)
+  group2.run(debug=True)
