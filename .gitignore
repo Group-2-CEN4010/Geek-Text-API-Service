@@ -1,2 +1,28 @@
-backend/.venv
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+.venv
+
+# PyCharm
+.idea/
+
+# Flask
+instance/
 .env
+.flaskenv
+*.db
+*.sqlite
+
+# Testing
+.pytest_cache/
+.coverage
+
+# OS
+.DS_Store
+Thumbs.db
