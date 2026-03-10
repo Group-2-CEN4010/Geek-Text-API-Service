@@ -67,7 +67,7 @@ def add_book_to_wishlist(wishlist_id):
     
     Expected JSON body:
     {
-        "book_id": 123
+        "isbn": 123
     }
     
     Response: None (just status code)
