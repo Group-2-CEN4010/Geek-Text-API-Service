@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Blueprint, request, jsonify
 from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
@@ -6,7 +6,7 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
-app = Flask(__name__)
+wishlist_bp = Blueprint('wishlist', __name__)
 
 # Initialize Supabase client
 SUPABASE_URL = os.environ.get("DB_URL")
@@ -19,7 +19,7 @@ WISHLIST_TABLE = "wishlist"
 WISHLIST_BOOKS_TABLE = "wishlist_books"  # Junction table for books in wishlists
 
 
-@app.route('/wishlist', methods=['POST'])
+@wishlist_bp.route('/wishlist', methods=['POST'])
 def create_wishlist():
     """
     Create a new wishlist for a user.
@@ -32,16 +32,35 @@ def create_wishlist():
     
     Response: None (just status code)
     """
-    # TODO: Get user_id and wishlist_name from request JSON
-    # TODO: Validate that both fields are provided
-    # TODO: Check that user doesn't already have 3 wishlists
-    # TODO: Check that wishlist name is unique for this user
-    # TODO: Insert new wishlist into database
-    # TODO: Return appropriate status code
-    pass
+    data = request.get_json()
+    user_id = data.get("user_id") if data else None
+    wishlist_name = data.get("wishlist_name") if data else None
+
+    if not user_id or not wishlist_name:
+        return jsonify({"error": "user_id and wishlist_name are required"}), 400
+
+    try:
+        # Check that user doesn't already have 3 wishlists
+        existing = supabase.table("wishlists").select("id").eq("user_id", user_id).execute()
+        if len(existing.data) >= 3:
+            print(f"[ERROR] Maximum number of wishlists (3) already reached")
+            return jsonify({"error": "User already has the maximum of 3 wishlists"}), 400
+
+        # Check that wishlist name is unique for this user
+        name_check = supabase.table("wishlists").select("id").eq("user_id", user_id).eq("name", wishlist_name).execute()
+        if name_check.data:
+            print(f"[ERROR] Wishlist with name {wishlist_name} already exists")
+            return jsonify({"error": "A wishlist with that name already exists"}), 400
+
+        supabase.table("wishlists").insert({"user_id": user_id, "name": wishlist_name}).execute()
+        print(f"[DEBUG] Created wishlist {wishlist_name} for user id {user_id}")
+        return jsonify({"message": "Wishlist created successfully."}), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
-@app.route('/wishlist/<int:wishlist_id>/books', methods=['POST'])
+@wishlist_bp.route('/wishlist/<int:wishlist_id>/books', methods=['POST'])
 def add_book_to_wishlist(wishlist_id):
     """
     Add a book to a user's wishlist.
@@ -63,7 +82,7 @@ def add_book_to_wishlist(wishlist_id):
     pass
 
 
-@app.route('/wishlist/<int:wishlist_id>/books/<int:book_id>', methods=['DELETE'])
+@wishlist_bp.route('/wishlist/<int:wishlist_id>/books/<int:book_id>', methods=['DELETE'])
 def remove_book_from_wishlist(wishlist_id, book_id):
     """
     Remove a book from a user's wishlist (and add to shopping cart).
@@ -82,7 +101,7 @@ def remove_book_from_wishlist(wishlist_id, book_id):
     pass
 
 
-@app.route('/wishlist/<int:wishlist_id>/books', methods=['GET'])
+@wishlist_bp.route('/wishlist/<int:wishlist_id>/books', methods=['GET'])
 def list_books_in_wishlist(wishlist_id):
     """
     List all books in a user's wishlist.
@@ -129,5 +148,3 @@ def list_books_in_wishlist(wishlist_id):
         return jsonify({"error": str(e)}), 500
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
