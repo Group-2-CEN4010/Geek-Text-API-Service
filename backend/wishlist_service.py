@@ -43,15 +43,18 @@ def create_wishlist():
         # Check that user doesn't already have 3 wishlists
         existing = supabase.table("wishlists").select("id").eq("user_id", user_id).execute()
         if len(existing.data) >= 3:
+            print(f"[ERROR] Maximum number of wishlists (3) already reached")
             return jsonify({"error": "User already has the maximum of 3 wishlists"}), 400
 
         # Check that wishlist name is unique for this user
         name_check = supabase.table("wishlists").select("id").eq("user_id", user_id).eq("name", wishlist_name).execute()
         if name_check.data:
+            print(f"[ERROR] Wishlist with name {wishlist_name} already exists")
             return jsonify({"error": "A wishlist with that name already exists"}), 400
 
         supabase.table("wishlists").insert({"user_id": user_id, "name": wishlist_name}).execute()
-        return '', 201
+        print(f"[DEBUG] Created wishlist {wishlist_name} for user id {user_id}")
+        return jsonify({"message": "Wishlist created successfully."}), 201
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
