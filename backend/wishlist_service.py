@@ -32,13 +32,29 @@ def create_wishlist():
     
     Response: None (just status code)
     """
-    # TODO: Get user_id and wishlist_name from request JSON
-    # TODO: Validate that both fields are provided
-    # TODO: Check that user doesn't already have 3 wishlists
-    # TODO: Check that wishlist name is unique for this user
-    # TODO: Insert new wishlist into database
-    # TODO: Return appropriate status code
-    pass
+    data = request.get_json()
+    user_id = data.get("user_id") if data else None
+    wishlist_name = data.get("wishlist_name") if data else None
+
+    if not user_id or not wishlist_name:
+        return jsonify({"error": "user_id and wishlist_name are required"}), 400
+
+    try:
+        # Check that user doesn't already have 3 wishlists
+        existing = supabase.table("wishlists").select("id").eq("user_id", user_id).execute()
+        if len(existing.data) >= 3:
+            return jsonify({"error": "User already has the maximum of 3 wishlists"}), 400
+
+        # Check that wishlist name is unique for this user
+        name_check = supabase.table("wishlists").select("id").eq("user_id", user_id).eq("name", wishlist_name).execute()
+        if name_check.data:
+            return jsonify({"error": "A wishlist with that name already exists"}), 400
+
+        supabase.table("wishlists").insert({"user_id": user_id, "name": wishlist_name}).execute()
+        return '', 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/wishlist/<int:wishlist_id>/books', methods=['POST'])
