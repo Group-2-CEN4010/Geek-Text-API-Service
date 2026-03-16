@@ -1,9 +1,8 @@
 from flask import Flask
-from wishlist_service import wishlist_bp
 
 app = Flask(__name__) # Creates an instance of the Flask object
 
-app.register_blueprint(wishlist_bp)
+import wishlist_service  # noqa: E402 — must be after app is created
 
 @app.route("/") # This is the API route. Whenever "/" is requested, it's going to run the function below it
 def home(): # This function will run when the route "/" is visited

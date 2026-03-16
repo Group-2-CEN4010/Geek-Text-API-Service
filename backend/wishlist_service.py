@@ -1,12 +1,11 @@
-from flask import Blueprint, request, jsonify
+from flask import request, jsonify
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from app import app
 import os
 
 # Load environment variables from .env file
 load_dotenv()
-
-wishlist_bp = Blueprint('wishlist', __name__)
 
 # Initialize Supabase client
 SUPABASE_URL = os.environ.get("DB_URL")
@@ -19,7 +18,7 @@ WISHLIST_TABLE = "wishlist"
 WISHLIST_BOOKS_TABLE = "wishlist_books"  # Junction table for books in wishlists
 
 
-@wishlist_bp.route('/wishlist', methods=['POST'])
+@app.route('/wishlist', methods=['POST'])
 def create_wishlist():
     """
     Create a new wishlist for a user.
@@ -60,7 +59,7 @@ def create_wishlist():
         return jsonify({"error": str(e)}), 500
 
 
-@wishlist_bp.route('/wishlist/<int:wishlist_id>/books', methods=['POST'])
+@app.route('/wishlist/<int:wishlist_id>/books', methods=['POST'])
 def add_book_to_wishlist(wishlist_id):
     """
     Add a book to a user's wishlist.
@@ -82,7 +81,7 @@ def add_book_to_wishlist(wishlist_id):
     pass
 
 
-@wishlist_bp.route('/wishlist/<int:wishlist_id>/books/<int:book_id>', methods=['DELETE'])
+@app.route('/wishlist/<int:wishlist_id>/books/<int:book_id>', methods=['DELETE'])
 def remove_book_from_wishlist(wishlist_id, book_id):
     """
     Remove a book from a user's wishlist (and add to shopping cart).
@@ -101,7 +100,7 @@ def remove_book_from_wishlist(wishlist_id, book_id):
     pass
 
 
-@wishlist_bp.route('/wishlist/<int:wishlist_id>/books', methods=['GET'])
+@app.route('/wishlist/<int:wishlist_id>/books', methods=['GET'])
 def list_books_in_wishlist(wishlist_id):
     """
     List all books in a user's wishlist.
