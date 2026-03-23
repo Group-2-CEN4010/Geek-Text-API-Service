@@ -15,8 +15,9 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Table name
+# Tables
 BOOKS_TABLE = "books"
+AUTHORS_TABLE = "authors"
 
 # Get book details from isbn.
 @app.route("/books/<string:book_isbn>", methods=["GET"])
@@ -64,6 +65,39 @@ def post_book():
 
         return jsonify({
             "message": "Book created successfully",
+            "data": response.data
+        }), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+#Administrator POST author with details.
+@app.route("/authors", methods=["POST"])
+def post_author():
+    try:
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        required_details = ["first_name", "last_name"]
+        for detail in required_details:
+            if detail not in data:
+                return jsonify({"error": f"{detail} is missing"}), 400
+
+        author = {
+            "first_name": data.get("first_name"),
+            "last_name": data.get("last_name"),
+            "biography": data.get("biography"),
+            "publisher": data.get("publisher"),
+        }
+
+        author = {k: v for k, v in author.items() if v is not None}
+
+        response = supabase.table(AUTHORS_TABLE).insert(author).execute()
+
+        return jsonify({
+            "message": "Author created successfully",
             "data": response.data
         }), 201
 
