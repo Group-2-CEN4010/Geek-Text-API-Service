@@ -39,11 +39,11 @@ def create_wishlist():
         return jsonify({"error": "user_id and wishlist_name are required"}), 400
 
     try:
-        # Check that user doesn't already have 3 wishlists
+        # Check that user doesn't already have 10 wishlists
         existing = supabase.table("wishlists").select("id").eq("user_id", user_id).execute()
-        if len(existing.data) >= 3:
-            print(f"[ERROR] Maximum number of wishlists (3) already reached")
-            return jsonify({"error": "User already has the maximum of 3 wishlists"}), 400
+        if len(existing.data) >= 10:
+            print(f"[ERROR] Maximum number of wishlists (10) already reached")
+            return jsonify({"error": "User already has the maximum of 10 wishlists"}), 400
 
         # Check that wishlist name is unique for this user
         name_check = supabase.table("wishlists").select("id").eq("user_id", user_id).eq("name", wishlist_name).execute()
