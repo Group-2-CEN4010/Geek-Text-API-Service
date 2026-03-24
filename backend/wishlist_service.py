@@ -114,11 +114,25 @@ def remove_book_from_wishlist(wishlist_id, book_id):
     
     Response: None (just status code)
     """
-    # TODO: Verify the wishlist exists
-    # TODO: Verify the book is in the wishlist
-    # TODO: Remove the book from the wishlist
-    # TODO: Return appropriate status code
-    pass
+    try:
+        # Verify the wishlist exists
+        wishlist_response = supabase.table("wishlists").select("id").eq("id", wishlist_id).execute()
+        if not wishlist_response.data:
+            return jsonify({"error": "Wishlist not found"}), 404
+
+        # Verify the book is in the wishlist
+        existing = supabase.table("wishlist_books").select("id").eq("wishlist_id", wishlist_id).eq("book_id", book_id).execute()
+        if not existing.data:
+            return jsonify({"error": "Book not found in wishlist"}), 404
+
+        # Remove the book from the wishlist
+        supabase.table("wishlist_books").delete().eq("wishlist_id", wishlist_id).eq("book_id", book_id).execute()
+        print(f"[DEBUG] Removed book {book_id} from wishlist {wishlist_id}")
+        return jsonify({"message": "Book removed from wishlist successfully."}), 200
+
+    except Exception as e:
+        print(f"[DEBUG] Error occurred: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/wishlist/<int:wishlist_id>/books', methods=['GET'])
