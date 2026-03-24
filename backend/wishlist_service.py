@@ -66,25 +66,47 @@ def add_book_to_wishlist(wishlist_id):
     
     Expected JSON body:
     {
-        "isbn": 123
+        "book_id": 123
     }
     
     Response: None (just status code)
     """
-    # TODO: Get book_id from request JSON
-    # TODO: Validate that book_id is provided
-    # TODO: Verify the wishlist exists
-    # TODO: Verify the book exists
-    # TODO: Check if book is already in this wishlist
-    # TODO: Insert book into wishlist
-    # TODO: Return appropriate status code
-    pass
+    data = request.get_json()
+    book_id = data.get("book_id") if data else None
+
+    if not book_id:
+        return jsonify({"error": "book_id is required"}), 400
+
+    try:
+        # Verify the wishlist exists
+        wishlist_response = supabase.table("wishlists").select("id").eq("id", wishlist_id).execute()
+        if not wishlist_response.data:
+            return jsonify({"error": "Wishlist not found"}), 404
+
+        # Verify the book exists
+        book_response = supabase.table("books").select("id").eq("id", book_id).execute()
+        if not book_response.data:
+            return jsonify({"error": "Book not found"}), 404
+
+        # Check if book is already in this wishlist
+        existing = supabase.table("wishlist_books").select("id").eq("wishlist_id", wishlist_id).eq("book_id", book_id).execute()
+        if existing.data:
+            return jsonify({"error": "Book is already in this wishlist"}), 400
+
+        # Insert book into wishlist
+        supabase.table("wishlist_books").insert({"wishlist_id": wishlist_id, "book_id": book_id}).execute()
+        print(f"[DEBUG] Added book {book_id} to wishlist {wishlist_id}")
+        return jsonify({"message": "Book added to wishlist successfully."}), 201
+
+    except Exception as e:
+        print(f"[DEBUG] Error occurred: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/wishlist/<int:wishlist_id>/books/<int:book_id>', methods=['DELETE'])
 def remove_book_from_wishlist(wishlist_id, book_id):
     """
-    Remove a book from a user's wishlist (and add to shopping cart).
+    Remove a book from a user's wishlist.
     
     URL Parameters:
     - wishlist_id: ID of the wishlist
@@ -95,7 +117,6 @@ def remove_book_from_wishlist(wishlist_id, book_id):
     # TODO: Verify the wishlist exists
     # TODO: Verify the book is in the wishlist
     # TODO: Remove the book from the wishlist
-    # TODO: (Optional) Add the book to user's shopping cart
     # TODO: Return appropriate status code
     pass
 
