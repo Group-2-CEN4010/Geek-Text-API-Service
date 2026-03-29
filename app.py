@@ -48,7 +48,7 @@ def get_user():
     else:
         return jsonify({"error": "user not found"}), 404
 
-#create user
+#create user 
 @app.route("/user", methods=["POST"])
 def create_user():
 
