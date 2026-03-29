@@ -2,24 +2,22 @@ from flask import Blueprint, request, jsonify
 from supabase import create_client
 from dotenv import load_dotenv
 import os
+from app import app
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+SUPABASE_URL = os.getenv("DB_URL")
+SUPABASE_KEY = os.getenv("DB_KEY")
 
-print("SUPABASE_URL:", SUPABASE_URL)
-print("SUPABASE_KEY loaded:", SUPABASE_KEY is not None)
+
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-book_browsing_bp = Blueprint("book_browsing", __name__)
-
-@book_browsing_bp.route("/test", methods=["GET"])
+@app.route("/test", methods=["GET"])
 def test():
     return jsonify({"message": "book browsing route works"}), 200
 
-@book_browsing_bp.route("/books/top-sellers", methods=["GET"])
+@app.route("/books/top-sellers", methods=["GET"])
 def get_top_sellers():
     try:
         response = (
@@ -33,7 +31,7 @@ def get_top_sellers():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@book_browsing_bp.route("/books/genre/<genre>", methods=["GET"])
+@app.route("/books/genre/<genre>", methods=["GET"])
 def get_books_by_genre(genre):
     try:
         response = (
@@ -46,7 +44,7 @@ def get_books_by_genre(genre):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@book_browsing_bp.route("/books/rating/<float:min_rating>", methods=["GET"])
+@app.route("/books/rating/<float:min_rating>", methods=["GET"])
 def get_books_by_rating(min_rating):
     try:
         response = (
@@ -60,7 +58,7 @@ def get_books_by_rating(min_rating):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@book_browsing_bp.route("/books/discount", methods=["PATCH"])
+@app.route("/books/discount", methods=["PATCH"])
 def discount_books_by_publisher():
     try:
         data = request.get_json()
