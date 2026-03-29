@@ -1,12 +1,11 @@
-from flask import Blueprint, request, jsonify
+from flask import request, jsonify
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from app import app
 import os
 
 # Load environment variables from .env file
 load_dotenv()
-
-wishlist_bp = Blueprint('wishlist', __name__)
 
 # Initialize Supabase client
 SUPABASE_URL = os.environ.get("DB_URL")
@@ -19,7 +18,7 @@ WISHLIST_TABLE = "wishlist"
 WISHLIST_BOOKS_TABLE = "wishlist_books"  # Junction table for books in wishlists
 
 
-@wishlist_bp.route('/wishlist', methods=['POST'])
+@app.route('/wishlist', methods=['POST'])
 def create_wishlist():
     """
     Create a new wishlist for a user.
@@ -40,11 +39,11 @@ def create_wishlist():
         return jsonify({"error": "user_id and wishlist_name are required"}), 400
 
     try:
-        # Check that user doesn't already have 3 wishlists
+        # Check that user doesn't already have 10 wishlists
         existing = supabase.table("wishlists").select("id").eq("user_id", user_id).execute()
-        if len(existing.data) >= 3:
-            print(f"[ERROR] Maximum number of wishlists (3) already reached")
-            return jsonify({"error": "User already has the maximum of 3 wishlists"}), 400
+        if len(existing.data) >= 10:
+            print(f"[ERROR] Maximum number of wishlists (10) already reached")
+            return jsonify({"error": "User already has the maximum of 10 wishlists"}), 400
 
         # Check that wishlist name is unique for this user
         name_check = supabase.table("wishlists").select("id").eq("user_id", user_id).eq("name", wishlist_name).execute()
@@ -60,7 +59,7 @@ def create_wishlist():
         return jsonify({"error": str(e)}), 500
 
 
-@wishlist_bp.route('/wishlist/<int:wishlist_id>/books', methods=['POST'])
+@app.route('/wishlist/<int:wishlist_id>/books', methods=['POST'])
 def add_book_to_wishlist(wishlist_id):
     """
     Add a book to a user's wishlist.
@@ -72,20 +71,42 @@ def add_book_to_wishlist(wishlist_id):
     
     Response: None (just status code)
     """
-    # TODO: Get book_id from request JSON
-    # TODO: Validate that book_id is provided
-    # TODO: Verify the wishlist exists
-    # TODO: Verify the book exists
-    # TODO: Check if book is already in this wishlist
-    # TODO: Insert book into wishlist
-    # TODO: Return appropriate status code
-    pass
+    data = request.get_json()
+    book_id = data.get("book_id") if data else None
+
+    if not book_id:
+        return jsonify({"error": "book_id is required"}), 400
+
+    try:
+        # Verify the wishlist exists
+        wishlist_response = supabase.table("wishlists").select("id").eq("id", wishlist_id).execute()
+        if not wishlist_response.data:
+            return jsonify({"error": "Wishlist not found"}), 404
+
+        # Verify the book exists
+        book_response = supabase.table("books").select("id").eq("id", book_id).execute()
+        if not book_response.data:
+            return jsonify({"error": "Book not found"}), 404
+
+        # Check if book is already in this wishlist
+        existing = supabase.table("wishlist_books").select("id").eq("wishlist_id", wishlist_id).eq("book_id", book_id).execute()
+        if existing.data:
+            return jsonify({"error": "Book is already in this wishlist"}), 400
+
+        # Insert book into wishlist
+        supabase.table("wishlist_books").insert({"wishlist_id": wishlist_id, "book_id": book_id}).execute()
+        print(f"[DEBUG] Added book {book_id} to wishlist {wishlist_id}")
+        return jsonify({"message": "Book added to wishlist successfully."}), 201
+
+    except Exception as e:
+        print(f"[DEBUG] Error occurred: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
-@wishlist_bp.route('/wishlist/<int:wishlist_id>/books/<int:book_id>', methods=['DELETE'])
+@app.route('/wishlist/<int:wishlist_id>/books/<int:book_id>', methods=['DELETE'])
 def remove_book_from_wishlist(wishlist_id, book_id):
     """
-    Remove a book from a user's wishlist (and add to shopping cart).
+    Remove a book from a user's wishlist.
     
     URL Parameters:
     - wishlist_id: ID of the wishlist
@@ -93,15 +114,57 @@ def remove_book_from_wishlist(wishlist_id, book_id):
     
     Response: None (just status code)
     """
-    # TODO: Verify the wishlist exists
-    # TODO: Verify the book is in the wishlist
-    # TODO: Remove the book from the wishlist
-    # TODO: (Optional) Add the book to user's shopping cart
-    # TODO: Return appropriate status code
-    pass
+    try:
+        # Verify the wishlist exists
+        wishlist_response = supabase.table("wishlists").select("id").eq("id", wishlist_id).execute()
+        if not wishlist_response.data:
+            return jsonify({"error": "Wishlist not found"}), 404
+
+        # Verify the book is in the wishlist
+        existing = supabase.table("wishlist_books").select("id").eq("wishlist_id", wishlist_id).eq("book_id", book_id).execute()
+        if not existing.data:
+            return jsonify({"error": "Book not found in wishlist"}), 404
+
+        # Remove the book from the wishlist
+        supabase.table("wishlist_books").delete().eq("wishlist_id", wishlist_id).eq("book_id", book_id).execute()
+        print(f"[DEBUG] Removed book {book_id} from wishlist {wishlist_id}")
+        return jsonify({"message": "Book removed from wishlist successfully."}), 200
+
+    except Exception as e:
+        print(f"[DEBUG] Error occurred: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 
-@wishlist_bp.route('/wishlist/<int:wishlist_id>/books', methods=['GET'])
+@app.route('/wishlist/<int:wishlist_id>', methods=['DELETE'])
+def delete_wishlist(wishlist_id):
+    """
+    Delete an entire wishlist and all books associated with it.
+
+    URL Parameters:
+    - wishlist_id: ID of the wishlist
+
+    Response: None (just status code)
+    """
+    try:
+        # Verify the wishlist exists
+        wishlist_response = supabase.table("wishlists").select("id").eq("id", wishlist_id).execute()
+        if not wishlist_response.data:
+            return jsonify({"error": "Wishlist not found"}), 404
+
+        # Remove all books from the wishlist first
+        supabase.table("wishlist_books").delete().eq("wishlist_id", wishlist_id).execute()
+
+        # Delete the wishlist itself
+        supabase.table("wishlists").delete().eq("id", wishlist_id).execute()
+        print(f"[DEBUG] Deleted wishlist {wishlist_id}")
+        return jsonify({"message": "Wishlist deleted successfully."}), 200
+
+    except Exception as e:
+        print(f"[DEBUG] Error occurred: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/wishlist/<int:wishlist_id>/books', methods=['GET'])
 def list_books_in_wishlist(wishlist_id):
     """
     List all books in a user's wishlist.
