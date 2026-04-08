@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import request, jsonify
 from supabase import create_client, Client
 from dotenv import load_dotenv
 from app import app
@@ -7,11 +7,9 @@ import os
 # Load environment variables from .env file
 load_dotenv()
 
-
 # Initialize Supabase client
 SUPABASE_URL = os.environ.get("DB_URL")
 SUPABASE_KEY = os.environ.get("DB_KEY")
-
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
@@ -51,6 +49,7 @@ def post_book():
             "isbn": data.get("isbn"),
             "title": data.get("title"),
             "author": data.get("author"),
+            "author_id": data.get("author_id"),
             "description": data.get("description"),
             "price": data.get("price"),
             "genre": data.get("genre"),
@@ -104,5 +103,26 @@ def post_author():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-if __name__ == "__main__":
-    app.run(debug=True)
+
+# Get list of books by author ID.
+@app.route("/authors/<int:author_id>/books", methods=["GET"])
+def get_books_by_author(author_id):
+    try:
+        # First check if author exists
+        author_response = supabase.table(AUTHORS_TABLE).select("*").eq("id", author_id).execute()
+
+        if not author_response.data:
+            return jsonify({"error": "Author not found"}), 404
+
+        # Get all books by this author
+        books_response = supabase.table(BOOKS_TABLE).select("*").eq("author_id", author_id).execute()
+
+        return jsonify({
+            "author": author_response.data[0],
+            "books": books_response.data,
+            "count": len(books_response.data)
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
